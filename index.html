@@ -119,6 +119,7 @@
 
           // Touch events for mobile
           const handleTouchStart = (e) => {
+            e.preventDefault();
             const touch = e.touches[0];
             setIsDragging(true);
             setStartPos({ x: touch.clientX, y: touch.clientY });
@@ -128,10 +129,11 @@
           const handleTouchMove = (e) => {
             if (!isDragging) return;
             e.preventDefault();
+            e.stopPropagation();
             
             const touch = e.touches[0];
             const deltaX = touch.clientX - startPos.x;
-            const deltaY = touch.clientY - startPos.y;
+            const deltaY = 0; // Only allow horizontal movement
             setDragOffset({ x: deltaX, y: deltaY });
           };
 
@@ -207,7 +209,7 @@
             const opacity = Math.max(0.7, 1 - Math.abs(dragOffset.x) / 300);
             
             return {
-              transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${rotation}deg)`,
+              transform: `translate(${dragOffset.x}px, 0px) rotate(${rotation}deg)`,
               opacity: opacity,
               cursor: isDragging ? 'grabbing' : 'grab',
             };
@@ -366,29 +368,11 @@
                 </div>
               </div>
 
-              {/* Swipe Indicators */}
-              <div className="w-full max-w-md mb-4 flex justify-between px-8">
-                <div 
-                  className="flex items-center gap-2 text-red-500"
-                  style={getSwipeIndicatorStyle('left')}
-                >
-                  <XIcon />
-                  <span className="font-bold">Try Again</span>
-                </div>
-                <div 
-                  className="flex items-center gap-2 text-green-500"
-                  style={getSwipeIndicatorStyle('right')}
-                >
-                  <span className="font-bold">Good Job!</span>
-                  <CheckIcon />
-                </div>
-              </div>
-
               {/* Flashcard */}
               <div className="relative w-full max-w-md h-96 mb-8">
                 <div
                   ref={cardRef}
-                  className="absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100 select-none"
+                  className="absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100 select-none touch-manipulation"
                   style={getCardStyle()}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
@@ -412,7 +396,7 @@
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-4">
+              <div className="flex gap-4 mb-4">
                 <button
                   onClick={() => handleResponse(false)}
                   className="px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors flex items-center gap-2"
@@ -427,15 +411,6 @@
                   <CheckIcon />
                   Good Job!
                 </button>
-              </div>
-
-              {/* Instructions */}
-              <div className="mt-8 text-center text-gray-600 max-w-md">
-                <p className="text-sm">
-                  Swipe right or tap "Good Job!" when you know the letter.
-                  <br />
-                  Swipe left or tap "Try Again" if you need more practice.
-                </p>
               </div>
             </div>
           );
