@@ -4,27 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alphabet Flashcards</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Prevent text selection on mobile */
-        .select-none {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
-    </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
-        const { CheckCircle, XCircle, RotateCcw, Settings } = lucideReact;
 
         const AlphabetFlashcards = () => {
           // Load saved data from localStorage
@@ -233,6 +222,11 @@
             };
           };
 
+          // Simple icons using Unicode symbols
+          const CheckIcon = () => <span className="text-2xl">✓</span>;
+          const XIcon = () => <span className="text-2xl">✗</span>;
+          const SettingsIcon = () => <span className="text-xl">⚙</span>;
+
           return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-4">
               {/* Header */}
@@ -242,7 +236,7 @@
                   onClick={() => setShowSettings(!showSettings)}
                   className="p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
                 >
-                  <Settings size={24} />
+                  <SettingsIcon />
                 </button>
               </div>
 
@@ -378,7 +372,7 @@
                   className="flex items-center gap-2 text-red-500"
                   style={getSwipeIndicatorStyle('left')}
                 >
-                  <XCircle size={32} />
+                  <XIcon />
                   <span className="font-bold">Try Again</span>
                 </div>
                 <div 
@@ -386,7 +380,7 @@
                   style={getSwipeIndicatorStyle('right')}
                 >
                   <span className="font-bold">Good Job!</span>
-                  <CheckCircle size={32} />
+                  <CheckIcon />
                 </div>
               </div>
 
@@ -423,14 +417,14 @@
                   onClick={() => handleResponse(false)}
                   className="px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors flex items-center gap-2"
                 >
-                  <XCircle size={20} />
+                  <XIcon />
                   Try Again
                 </button>
                 <button
                   onClick={() => handleResponse(true)}
                   className="px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors flex items-center gap-2"
                 >
-                  <CheckCircle size={20} />
+                  <CheckIcon />
                   Good Job!
                 </button>
               </div>
@@ -447,7 +441,8 @@
           );
         };
 
-        ReactDOM.render(<AlphabetFlashcards />, document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<AlphabetFlashcards />);
     </script>
 </body>
 </html>
