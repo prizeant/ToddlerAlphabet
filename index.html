@@ -2,12 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Alphabet Flashcards</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: pan-y;
+        }
+        
+        .flashcard-container {
+            touch-action: none;
+        }
+    </style>
 </head>
 <body>
     <div id="root"></div>
@@ -125,8 +137,7 @@
             if (!isDragging) return;
             
             const deltaX = e.clientX - startPos.x;
-            const deltaY = e.clientY - startPos.y;
-            setDragOffset({ x: deltaX, y: deltaY });
+            setDragOffset({ x: deltaX, y: 0 });
           };
 
           const handleMouseUp = () => {
@@ -134,7 +145,6 @@
             
             const threshold = 100;
             if (Math.abs(dragOffset.x) > threshold) {
-              // Right swipe = success, Left swipe = fail
               handleResponse(dragOffset.x > 0);
             }
             
@@ -145,40 +155,19 @@
           // Touch events for mobile
           const handleTouchStart = (e) => {
             e.preventDefault();
-            e.stopPropagation();
             const touch = e.touches[0];
             setIsDragging(true);
             setStartPos({ x: touch.clientX, y: touch.clientY });
             setDragOffset({ x: 0, y: 0 });
-            
-            // Lock the body scroll completely
-            document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
           };
 
           const handleTouchMove = (e) => {
             if (!isDragging) return;
             e.preventDefault();
-            e.stopPropagation();
             
             const touch = e.touches[0];
             const deltaX = touch.clientX - startPos.x;
-            setDragOffset({ x: deltaX, y: 0 }); // Only horizontal movement
-          };
-
-          const handleTouchEnd = (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const threshold = 100;
-            if (Math.abs(dragOffset.x) > threshold) {
-              handleResponse(dragOffset.x > 0);
-            }
-            
-            setIsDragging(false);
-            setDragOffset({ x: 0, y: 0 });
+            setDragOffset({ x: deltaX, y: 0 });
           };
 
           const handleTouchEnd = () => {
@@ -259,22 +248,13 @@
             };
           };
 
-          const getSwipeIndicatorStyle = (direction) => {
-            const isActive = direction === 'right' ? dragOffset.x > 50 : dragOffset.x < -50;
-            return {
-              opacity: isActive ? 1 : 0.3,
-              transform: `scale(${isActive ? 1.2 : 1})`,
-              transition: isDragging ? 'none' : 'all 0.2s ease',
-            };
-          };
-
           // Simple icons using Unicode symbols
           const CheckIcon = () => <span className="text-2xl">✓</span>;
           const XIcon = () => <span className="text-2xl">✗</span>;
           const SettingsIcon = () => <span className="text-xl">⚙</span>;
 
           return (
-            <div className="h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-2 overflow-hidden">
+            <div className="h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-2">
               {/* Header */}
               <div className="w-full max-w-md mb-4 flex justify-between items-center">
                 <h1 className="text-xl font-bold text-gray-800">Alphabet Practice</h1>
@@ -413,10 +393,10 @@
               </div>
 
               {/* Flashcard */}
-              <div className="relative w-full max-w-md h-80 mb-4">
+              <div className="relative w-full max-w-md h-64 mb-4">
                 <div
                   ref={cardRef}
-                  className="absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100 select-none touch-manipulation"
+                  className="flashcard-container absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100"
                   style={getCardStyle()}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
@@ -426,7 +406,7 @@
                   onTouchMove={handleTouchMove}
                   onTouchEnd={handleTouchEnd}
                 >
-                  <div className="text-9xl font-bold text-gray-800 font-mono">
+                  <div className="text-8xl font-bold text-gray-800 font-mono">
                     {currentLetter}
                   </div>
                   
