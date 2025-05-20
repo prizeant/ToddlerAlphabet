@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alphabet Flashcards</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Prevent text selection on mobile */
+        .select-none {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { CheckCircle, XCircle, RotateCcw, Settings } = lucideReact;
+
+        const AlphabetFlashcards = () => {
+          // Load saved data from localStorage
+          const loadSavedData = () => {
+            try {
+              const savedData = localStorage.getItem('alphabet-flashcards-data');
+              if (savedData) {
+                const parsed = JSON.parse(savedData);
+                return {
+                  currentSet: parsed.currentSet || ['A', 'B', 'C', 'D', 'E'],
+                  currentCardIndex: parsed.currentCardIndex || 0,
+                  scores: parsed.scores || {},
+                  successThreshold: parsed.successThreshold || 3
+                };
+              }
+            } catch (error) {
+              console.log('Error loading saved data:', error);
+            }
+            return {
+              currentSet: ['A', 'B', 'C', 'D', 'E'],
+              currentCardIndex: 0,
+              scores: {},
+              successThreshold: 3
+            };
+          };
+
+          const savedData = loadSavedData();
+          const [currentSet, setCurrentSet] = useState(savedData.currentSet);
+          const [currentCardIndex, setCurrentCardIndex] = useState(savedData.currentCardIndex);
+          const [scores, setScores] = useState(savedData.scores);
+          const [isDragging, setIsDragging] = useState(false);
+          const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+          const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+          const [showSettings, setShowSettings] = useState(false);
+          const [successThreshold, setSuccessThreshold] = useState(savedData.successThreshold);
+          const cardRef = useRef(null);
+
+          // Save data to localStorage whenever state changes
+          const saveData = () => {
+            try {
+              const dataToSave = {
+                currentSet,
+                currentCardIndex,
+                scores,
+                successThreshold,
+                lastSaved: new Date().toISOString()
+              };
+              localStorage.setItem('alphabet-flashcards-data', JSON.stringify(dataToSave));
+            } catch (error) {
+              console.log('Error saving data:', error);
+            }
+          };
+
+          // Auto-save when important data changes
+          useEffect(() => {
+            saveData();
+          }, [currentSet, currentCardIndex, scores, successThreshold]);
+
+          const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+          
+          const currentLetter = currentSet[currentCardIndex];
+
+          const handleResponse = (isCorrect) => {
+            const letter = currentLetter;
+            const currentScore = scores[letter] || 0;
+            const newScore = isCorrect ? currentScore + 1 : Math.max(0, currentScore - 1);
+            
+            setScores(prev => ({
+              ...prev,
+              [letter]: newScore
+            }));
+
+            // Move to next card
+            setCurrentCardIndex((prev) => (prev + 1) % currentSet.length);
+          };
+
+          const handleMouseDown = (e) => {
+            setIsDragging(true);
+            setStartPos({ x: e.clientX, y: e.clientY });
+            setDragOffset({ x: 0, y: 0 });
+          };
+
+          const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startPos.x;
+            const deltaY = e.clientY - startPos.y;
+            setDragOffset({ x: deltaX, y: deltaY });
+          };
+
+          const handleMouseUp = () => {
+            if (!isDragging) return;
+            
+            const threshold = 100;
+            if (Math.abs(dragOffset.x) > threshold) {
+              // Right swipe = success, Left swipe = fail
+              handleResponse(dragOffset.x > 0);
+            }
+            
+            setIsDragging(false);
+            setDragOffset({ x: 0, y: 0 });
+          };
+
+          // Touch events for mobile
+          const handleTouchStart = (e) => {
+            const touch = e.touches[0];
+            setIsDragging(true);
+            setStartPos({ x: touch.clientX, y: touch.clientY });
+            setDragOffset({ x: 0, y: 0 });
+          };
+
+          const handleTouchMove = (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - startPos.x;
+            const deltaY = touch.clientY - startPos.y;
+            setDragOffset({ x: deltaX, y: deltaY });
+          };
+
+          const handleTouchEnd = () => {
+            if (!isDragging) return;
+            
+            const threshold = 100;
+            if (Math.abs(dragOffset.x) > threshold) {
+              handleResponse(dragOffset.x > 0);
+            }
+            
+            setIsDragging(false);
+            setDragOffset({ x: 0, y: 0 });
+          };
+
+          const resetCurrentSet = () => {
+            setScores(prev => {
+              const newScores = { ...prev };
+              currentSet.forEach(letter => {
+                newScores[letter] = 0;
+              });
+              return newScores;
+            });
+            setCurrentCardIndex(0);
+          };
+
+          const clearAllData = () => {
+            if (window.confirm('Are you sure you want to clear all progress? This cannot be undone.')) {
+              setScores({});
+              setCurrentSet(['A', 'B', 'C', 'D', 'E']);
+              setCurrentCardIndex(0);
+              setSuccessThreshold(3);
+              localStorage.removeItem('alphabet-flashcards-data');
+            }
+          };
+
+          const generateNewSet = () => {
+            // Get letters that need more practice (score < threshold)
+            const needsPractice = allLetters.filter(letter => 
+              (scores[letter] || 0) < successThreshold
+            );
+            
+            if (needsPractice.length >= 5) {
+              // Take first 5 letters that need practice
+              setCurrentSet(needsPractice.slice(0, 5));
+            } else {
+              // Mix letters that need practice with new ones
+              const practiced = allLetters.filter(letter => 
+                (scores[letter] || 0) >= successThreshold
+              );
+              const remaining = allLetters.filter(letter => 
+                !currentSet.includes(letter) && !practiced.includes(letter)
+              );
+              
+              const newSet = [
+                ...needsPractice,
+                ...remaining.slice(0, 5 - needsPractice.length)
+              ];
+              
+              if (newSet.length < 5) {
+                // Fill with any letters if we're running low
+                const filler = allLetters.filter(letter => !newSet.includes(letter));
+                newSet.push(...filler.slice(0, 5 - newSet.length));
+              }
+              
+              setCurrentSet(newSet.slice(0, 5));
+            }
+            setCurrentCardIndex(0);
+          };
+
+          const getCardStyle = () => {
+            const rotation = dragOffset.x * 0.1;
+            const opacity = Math.max(0.7, 1 - Math.abs(dragOffset.x) / 300);
+            
+            return {
+              transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${rotation}deg)`,
+              opacity: opacity,
+              cursor: isDragging ? 'grabbing' : 'grab',
+            };
+          };
+
+          const getSwipeIndicatorStyle = (direction) => {
+            const isActive = direction === 'right' ? dragOffset.x > 50 : dragOffset.x < -50;
+            return {
+              opacity: isActive ? 1 : 0.3,
+              transform: `scale(${isActive ? 1.2 : 1})`,
+              transition: isDragging ? 'none' : 'all 0.2s ease',
+            };
+          };
+
+          return React.createElement('div', {
+            className: "min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-4"
+          }, [
+            // Header
+            React.createElement('div', {
+              key: 'header',
+              className: "w-full max-w-md mb-8 flex justify-between items-center"
+            }, [
+              React.createElement('h1', {
+                key: 'title',
+                className: "text-2xl font-bold text-gray-800"
+              }, "Alphabet Practice"),
+              React.createElement('button', {
+                key: 'settings-btn',
+                onClick: () => setShowSettings(!showSettings),
+                className: "p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
+              }, React.createElement(Settings, { size: 24 }))
+            ]),
+
+            // Settings Panel
+            showSettings && React.createElement('div', {
+              key: 'settings',
+              className: "w-full max-w-md mb-6 p-4 bg-white rounded-xl shadow-lg"
+            }, React.createElement('div', {
+              className: "space-y-4"
+            }, [
+              React.createElement('div', {
+                key: 'current-set'
+              }, [
+                React.createElement('h3', {
+                  key: 'set-title',
+                  className: "text-lg font-semibold mb-2"
+                }, "Current Set"),
+                React.createElement('div', {
+                  key: 'set-letters',
+                  className: "flex gap-2 mb-3"
+                }, currentSet.map((letter, index) =>
+                  React.createElement('span', {
+                    key: letter,
+                    className: `w-10 h-10 rounded-lg border-2 flex items-center justify-center font-bold ${
+                      index === currentCardIndex
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : 'bg-gray-100 border-gray-300'
+                    }`
+                  }, letter)
+                )),
+                React.createElement('div', {
+                  key: 'set-buttons',
+                  className: "flex gap-2 flex-wrap"
+                }, [
+                  React.createElement('button', {
+                    key: 'reset',
+                    onClick: resetCurrentSet,
+                    className: "px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600 transition-colors"
+                  }, "Reset Current Set"),
+                  React.createElement('button', {
+                    key: 'new-set',
+                    onClick: generateNewSet,
+                    className: "px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 transition-colors"
+                  }, "New Set"),
+                  React.createElement('button', {
+                    key: 'clear-all',
+                    onClick: clearAllData,
+                    className: "px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
+                  }, "Clear All Progress")
+                ])
+              ]),
+              
+              React.createElement('div', {
+                key: 'settings-controls'
+              }, [
+                React.createElement('h3', {
+                  key: 'settings-title',
+                  className: "text-lg font-semibold mb-2"
+                }, "Settings"),
+                React.createElement('div', {
+                  key: 'threshold-setting',
+                  className: "flex items-center gap-2"
+                }, [
+                  React.createElement('label', {
+                    key: 'threshold-label',
+                    className: "text-sm"
+                  }, "Success threshold:"),
+                  React.createElement('select', {
+                    key: 'threshold-select',
+                    value: successThreshold,
+                    onChange: (e) => setSuccessThreshold(Number(e.target.value)),
+                    className: "px-2 py-1 border rounded text-sm"
+                  }, [
+                    React.createElement('option', { key: '2', value: 2 }, "2 correct swipes"),
+                    React.createElement('option', { key: '3', value: 3 }, "3 correct swipes"),
+                    React.createElement('option', { key: '4', value: 4 }, "4 correct swipes"),
+                    React.createElement('option', { key: '5', value: 5 }, "5 correct swipes")
+                  ])
+                ])
+              ]),
+
+              React.createElement('div', {
+                key: 'progress'
+              }, [
+                React.createElement('h3', {
+                  key: 'progress-title',
+                  className: "text-lg font-semibold mb-2"
+                }, "Progress"),
+                React.createElement('div', {
+                  key: 'progress-grid',
+                  className: "grid grid-cols-6 gap-1"
+                }, allLetters.map(letter => {
+                  const score = scores[letter] || 0;
+                  const isInCurrentSet = currentSet.includes(letter);
+                  return React.createElement('div', {
+                    key: letter,
+                    className: `w-8 h-8 rounded flex items-center justify-center text-xs font-bold ${
+                      score >= successThreshold
+                        ? 'bg-green-500 text-white'
+                        : isInCurrentSet
+                        ? 'bg-blue-100 border-2 border-blue-500 text-blue-700'
+                        : 'bg-gray-100 text-gray-600'
+                    }`,
+                    title: `${letter}: ${score}/${successThreshold}`
+                  }, letter);
+                }))
+              ])
+            ])),
+
+            // Progress for Current Set
+            React.createElement('div', {
+              key: 'current-progress',
+              className: "w-full max-w-md mb-6"
+            }, [
+              React.createElement('div', {
+                key: 'progress-header',
+                className: "flex justify-between items-center mb-2"
+              }, [
+                React.createElement('span', {
+                  key: 'progress-label',
+                  className: "text-sm font-medium text-gray-600"
+                }, "Current Set Progress"),
+                React.createElement('span', {
+                  key: 'progress-count',
+                  className: "text-sm text-gray-500"
+                }, `${currentSet.filter(letter => (scores[letter] || 0) >= successThreshold).length} / ${currentSet.length} mastered`)
+              ]),
+              React.createElement('div', {
+                key: 'progress-bars',
+                className: "flex gap-2"
+              }, currentSet.map((letter, index) => {
+                const score = scores[letter] || 0;
+                const isCompleted = score >= successThreshold;
+                return React.createElement('div', {
+                  key: letter,
+                  className: "flex-1 text-center"
+                }, [
+                  React.createElement('div', {
+                    key: 'bar',
+                    className: `w-full h-2 rounded-full ${
+                      isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                    }`
+                  }, !isCompleted && React.createElement('div', {
+                    className: "h-full bg-blue-500 rounded-full transition-all duration-300",
+                    style: { width: `${(score / successThreshold) * 100}%` }
+                  })),
+                  React.createElement('span', {
+                    key: 'letter',
+                    className: `text-xs font-medium mt-1 block ${
+                      index === currentCardIndex ? 'text-blue-600' : 'text-gray-500'
+                    }`
+                  }, letter)
+                ]);
+              }))
+            ]),
+
+            // Swipe Indicators
+            React.createElement('div', {
+              key: 'indicators',
+              className: "w-full max-w-md mb-4 flex justify-between px-8"
+            }, [
+              React.createElement('div', {
+                key: 'left-indicator',
+                className: "flex items-center gap-2 text-red-500",
+                style: getSwipeIndicatorStyle('left')
+              }, [
+                React.createElement(XCircle, { key: 'left-icon', size: 32 }),
+                React.createElement('span', {
+                  key: 'left-text',
+                  className: "font-bold"
+                }, "Try Again")
+              ]),
+              React.createElement('div', {
+                key: 'right-indicator',
+                className: "flex items-center gap-2 text-green-500",
+                style: getSwipeIndicatorStyle('right')
+              }, [
+                React.createElement('span', {
+                  key: 'right-text',
+                  className: "font-bold"
+                }, "Good Job!"),
+                React.createElement(CheckCircle, { key: 'right-icon', size: 32 })
+              ])
+            ]),
+
+            // Flashcard
+            React.createElement('div', {
+              key: 'card-container',
+              className: "relative w-full max-w-md h-96 mb-8"
+            }, React.createElement('div', {
+              ref: cardRef,
+              className: "absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100 select-none",
+              style: getCardStyle(),
+              onMouseDown: handleMouseDown,
+              onMouseMove: handleMouseMove,
+              onMouseUp: handleMouseUp,
+              onMouseLeave: handleMouseUp,
+              onTouchStart: handleTouchStart,
+              onTouchMove: handleTouchMove,
+              onTouchEnd: handleTouchEnd
+            }, [
+              React.createElement('div', {
+                key: 'letter',
+                className: "text-9xl font-bold text-gray-800 font-mono"
+              }, currentLetter),
+              
+              isDragging && React.createElement('div', {
+                key: 'drag-hint',
+                className: "absolute bottom-4 left-1/2 transform -translate-x-1/2 text-gray-400 text-sm"
+              }, "Keep swiping...")
+            ])),
+
+            // Action Buttons
+            React.createElement('div', {
+              key: 'buttons',
+              className: "flex gap-4"
+            }, [
+              React.createElement('button', {
+                key: 'fail-btn',
+                onClick: () => handleResponse(false),
+                className: "px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors flex items-center gap-2"
+              }, [
+                React.createElement(XCircle, { key: 'fail-icon', size: 20 }),
+                "Try Again"
+              ]),
+              React.createElement('button', {
+                key: 'success-btn',
+                onClick: () => handleResponse(true),
+                className: "px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors flex items-center gap-2"
+              }, [
+                React.createElement(CheckCircle, { key: 'success-icon', size: 20 }),
+                "Good Job!"
+              ])
+            ]),
+
+            // Instructions
+            React.createElement('div', {
+              key: 'instructions',
+              className: "mt-8 text-center text-gray-600 max-w-md"
+            }, React.createElement('p', {
+              className: "text-sm"
+            }, [
+              "Swipe right or tap \"Good Job!\" when you know the letter.",
+              React.createElement('br', { key: 'br' }),
+              "Swipe left or tap \"Try Again\" if you need more practice."
+            ]))
+          ]);
+        };
+
+        ReactDOM.render(React.createElement(AlphabetFlashcards), document.getElementById('root'));
+    </script>
+</body>
+</html>
