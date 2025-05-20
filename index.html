@@ -19,6 +19,60 @@
         .flashcard-container {
             touch-action: none;
         }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-20px);
+            }
+            60% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        .bounce {
+            animation: bounce 1s;
+        }
+        
+        @keyframes shake {
+            10%, 90% {
+                transform: translateX(-1px);
+            }
+            20%, 80% {
+                transform: translateX(2px);
+            }
+            30%, 50%, 70% {
+                transform: translateX(-4px);
+            }
+            40%, 60% {
+                transform: translateX(4px);
+            }
+        }
+        
+        .shake {
+            animation: shake 0.5s;
+        }
+        
+        @keyframes confetti {
+            0% {
+                opacity: 1;
+                transform: translateY(0) rotateZ(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(300px) rotateZ(360deg);
+            }
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: confetti 2s forwards;
+        }
     </style>
 </head>
 <body>
@@ -61,6 +115,9 @@
           const [startPos, setStartPos] = useState({ x: 0, y: 0 });
           const [showSettings, setShowSettings] = useState(false);
           const [successThreshold, setSuccessThreshold] = useState(savedData.successThreshold);
+          const [showCorrectFeedback, setShowCorrectFeedback] = useState(false);
+          const [showWrongFeedback, setShowWrongFeedback] = useState(false);
+          const [showCelebration, setShowCelebration] = useState(false);
           const cardRef = useRef(null);
 
           // Save data to localStorage whenever state changes
@@ -95,8 +152,20 @@
             let newScore;
             if (isCorrect) {
               newScore = currentScore + 1;
+              setShowCorrectFeedback(true);
+              setTimeout(() => setShowCorrectFeedback(false), 1000);
+              
+              // Play correct sound
+              try {
+                const sound = document.getElementById('correct-sound');
+                if (sound) sound.play().catch(e => console.log('Error playing sound:', e));
+              } catch (e) {
+                console.log('Error with audio:', e);
+              }
             } else {
               newScore = 0; // Reset to 0 on wrong answer
+              setShowWrongFeedback(true);
+              setTimeout(() => setShowWrongFeedback(false), 700);
             }
             
             const updatedScores = {
@@ -108,6 +177,18 @@
 
             // Check if letter is now mastered
             if (newScore >= successThreshold) {
+              // Show celebration
+              setShowCelebration(true);
+              setTimeout(() => setShowCelebration(false), 2000);
+              
+              // Play celebration sound
+              try {
+                const sound = document.getElementById('celebration-sound');
+                if (sound) sound.play().catch(e => console.log('Error playing sound:', e));
+              } catch (e) {
+                console.log('Error with audio:', e);
+              }
+              
               // Replace the mastered letter with a new one
               const masteredLetterIndex = currentSet.indexOf(letter);
               const availableLetters = allLetters.filter(l => 
@@ -119,12 +200,20 @@
                 const newLetter = availableLetters[0];
                 const newSet = [...currentSet];
                 newSet[masteredLetterIndex] = newLetter;
-                setCurrentSet(newSet);
+                
+                // Wait for celebration to finish before changing
+                setTimeout(() => {
+                  setCurrentSet(newSet);
+                  setCurrentCardIndex((prev) => (prev + 1) % currentSet.length);
+                }, 1500);
+                return;
               }
             }
 
-            // Move to next card
-            setCurrentCardIndex((prev) => (prev + 1) % currentSet.length);
+            // Move to next card (with slight delay if feedback is showing)
+            setTimeout(() => {
+              setCurrentCardIndex((prev) => (prev + 1) % currentSet.length);
+            }, isCorrect ? 800 : 500);
           };
 
           const handleMouseDown = (e) => {
@@ -397,7 +486,7 @@
                 <div className="w-full aspect-square">
                   <div
                     ref={cardRef}
-                    className="flashcard-container absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100"
+                    className={`flashcard-container absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100 ${showCorrectFeedback ? 'bounce' : ''} ${showWrongFeedback ? 'shake' : ''}`}
                     style={getCardStyle()}
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
@@ -415,6 +504,41 @@
                     {isDragging && (
                       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-gray-400 text-sm">
                         Keep swiping...
+                      </div>
+                    )}
+                    
+                    {/* Success feedback overlay */}
+                    {showCorrectFeedback && (
+                      <div className="absolute inset-0 bg-green-200 bg-opacity-30 rounded-3xl flex items-center justify-center">
+                        <div className="text-4xl text-green-600 font-bold">Great job!</div>
+                      </div>
+                    )}
+                    
+                    {/* Celebration confetti */}
+                    {showCelebration && (
+                      <div className="absolute inset-0 overflow-hidden rounded-3xl">
+                        {Array.from({ length: 50 }).map((_, i) => {
+                          const randomLeft = Math.random() * 100;
+                          const randomDelay = Math.random() * 0.5;
+                          const randomColor = ['#FF5252', '#FFD740', '#64FFDA', '#536DFE', '#8C9EFF'][Math.floor(Math.random() * 5)];
+                          
+                          return (
+                            <div 
+                              key={i}
+                              className="confetti"
+                              style={{
+                                left: `${randomLeft}%`,
+                                top: '-10px',
+                                backgroundColor: randomColor,
+                                animationDelay: `${randomDelay}s`,
+                              }}
+                            />
+                          );
+                        })}
+                        <div className="absolute inset-0 flex items-center justify-center flex-col">
+                          <div className="text-4xl text-purple-600 font-bold mb-2">WOW!</div>
+                          <div className="text-2xl text-purple-500 font-bold">You mastered {currentLetter}!</div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -438,6 +562,14 @@
                   Good Job!
                 </button>
               </div>
+              
+              {/* Sound effects (hidden) */}
+              <audio id="correct-sound" preload="auto">
+                <source src="https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg" type="audio/ogg" />
+              </audio>
+              <audio id="celebration-sound" preload="auto">
+                <source src="https://actions.google.com/sounds/v1/cartoon/crazy_celebration.ogg" type="audio/ogg" />
+              </audio>
             </div>
           );
         };
