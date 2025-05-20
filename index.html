@@ -510,7 +510,7 @@
                     {/* Success feedback overlay */}
                     {showCorrectFeedback && (
                       <div className="absolute inset-0 bg-green-200 bg-opacity-30 rounded-3xl flex items-center justify-center">
-                        <div className="text-4xl text-green-600 font-bold">Great job!</div>
+                        {/* No text overlay */}
                       </div>
                     )}
                     
@@ -535,10 +535,7 @@
                             />
                           );
                         })}
-                        <div className="absolute inset-0 flex items-center justify-center flex-col">
-                          <div className="text-4xl text-purple-600 font-bold mb-2">WOW!</div>
-                          <div className="text-2xl text-purple-500 font-bold">You mastered {currentLetter}!</div>
-                        </div>
+                        {/* No text overlay here either */}
                       </div>
                     )}
                   </div>
