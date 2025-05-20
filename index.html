@@ -254,7 +254,7 @@
           const SettingsIcon = () => <span className="text-xl">⚙</span>;
 
           return (
-            <div className="h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-2">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center p-2 pt-8">
               {/* Header */}
               <div className="w-full max-w-md mb-4 flex justify-between items-center">
                 <h1 className="text-xl font-bold text-gray-800">Alphabet Practice</h1>
@@ -393,29 +393,31 @@
               </div>
 
               {/* Flashcard */}
-              <div className="relative w-full max-w-md h-64 mb-4">
-                <div
-                  ref={cardRef}
-                  className="flashcard-container absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100"
-                  style={getCardStyle()}
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
-                >
-                  <div className="text-8xl font-bold text-gray-800 font-mono">
-                    {currentLetter}
-                  </div>
-                  
-                  {/* Drag indication */}
-                  {isDragging && (
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-gray-400 text-sm">
-                      Keep swiping...
+              <div className="relative w-full max-w-md mb-4">
+                <div className="w-full aspect-square">
+                  <div
+                    ref={cardRef}
+                    className="flashcard-container absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100"
+                    style={getCardStyle()}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    <div className="text-8xl font-bold text-gray-800 font-mono">
+                      {currentLetter}
                     </div>
-                  )}
+                    
+                    {/* Drag indication */}
+                    {isDragging && (
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-gray-400 text-sm">
+                        Keep swiping...
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
