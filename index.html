@@ -233,272 +233,221 @@
             };
           };
 
-          return React.createElement('div', {
-            className: "min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-4"
-          }, [
-            // Header
-            React.createElement('div', {
-              key: 'header',
-              className: "w-full max-w-md mb-8 flex justify-between items-center"
-            }, [
-              React.createElement('h1', {
-                key: 'title',
-                className: "text-2xl font-bold text-gray-800"
-              }, "Alphabet Practice"),
-              React.createElement('button', {
-                key: 'settings-btn',
-                onClick: () => setShowSettings(!showSettings),
-                className: "p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
-              }, React.createElement(Settings, { size: 24 }))
-            ]),
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-4">
+              {/* Header */}
+              <div className="w-full max-w-md mb-8 flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-800">Alphabet Practice</h1>
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
+                >
+                  <Settings size={24} />
+                </button>
+              </div>
 
-            // Settings Panel
-            showSettings && React.createElement('div', {
-              key: 'settings',
-              className: "w-full max-w-md mb-6 p-4 bg-white rounded-xl shadow-lg"
-            }, React.createElement('div', {
-              className: "space-y-4"
-            }, [
-              React.createElement('div', {
-                key: 'current-set'
-              }, [
-                React.createElement('h3', {
-                  key: 'set-title',
-                  className: "text-lg font-semibold mb-2"
-                }, "Current Set"),
-                React.createElement('div', {
-                  key: 'set-letters',
-                  className: "flex gap-2 mb-3"
-                }, currentSet.map((letter, index) =>
-                  React.createElement('span', {
-                    key: letter,
-                    className: `w-10 h-10 rounded-lg border-2 flex items-center justify-center font-bold ${
-                      index === currentCardIndex
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-gray-100 border-gray-300'
-                    }`
-                  }, letter)
-                )),
-                React.createElement('div', {
-                  key: 'set-buttons',
-                  className: "flex gap-2 flex-wrap"
-                }, [
-                  React.createElement('button', {
-                    key: 'reset',
-                    onClick: resetCurrentSet,
-                    className: "px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600 transition-colors"
-                  }, "Reset Current Set"),
-                  React.createElement('button', {
-                    key: 'new-set',
-                    onClick: generateNewSet,
-                    className: "px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 transition-colors"
-                  }, "New Set"),
-                  React.createElement('button', {
-                    key: 'clear-all',
-                    onClick: clearAllData,
-                    className: "px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
-                  }, "Clear All Progress")
-                ])
-              ]),
-              
-              React.createElement('div', {
-                key: 'settings-controls'
-              }, [
-                React.createElement('h3', {
-                  key: 'settings-title',
-                  className: "text-lg font-semibold mb-2"
-                }, "Settings"),
-                React.createElement('div', {
-                  key: 'threshold-setting',
-                  className: "flex items-center gap-2"
-                }, [
-                  React.createElement('label', {
-                    key: 'threshold-label',
-                    className: "text-sm"
-                  }, "Success threshold:"),
-                  React.createElement('select', {
-                    key: 'threshold-select',
-                    value: successThreshold,
-                    onChange: (e) => setSuccessThreshold(Number(e.target.value)),
-                    className: "px-2 py-1 border rounded text-sm"
-                  }, [
-                    React.createElement('option', { key: '2', value: 2 }, "2 correct swipes"),
-                    React.createElement('option', { key: '3', value: 3 }, "3 correct swipes"),
-                    React.createElement('option', { key: '4', value: 4 }, "4 correct swipes"),
-                    React.createElement('option', { key: '5', value: 5 }, "5 correct swipes")
-                  ])
-                ])
-              ]),
+              {/* Settings Panel */}
+              {showSettings && (
+                <div className="w-full max-w-md mb-6 p-4 bg-white rounded-xl shadow-lg">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Current Set</h3>
+                      <div className="flex gap-2 mb-3">
+                        {currentSet.map((letter, index) => (
+                          <span
+                            key={letter}
+                            className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center font-bold ${
+                              index === currentCardIndex
+                                ? 'bg-blue-500 text-white border-blue-500'
+                                : 'bg-gray-100 border-gray-300'
+                            }`}
+                          >
+                            {letter}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={resetCurrentSet}
+                          className="px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600 transition-colors"
+                        >
+                          Reset Current Set
+                        </button>
+                        <button
+                          onClick={generateNewSet}
+                          className="px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 transition-colors"
+                        >
+                          New Set
+                        </button>
+                        <button
+                          onClick={clearAllData}
+                          className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
+                        >
+                          Clear All Progress
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Settings</h3>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm">Success threshold:</label>
+                        <select
+                          value={successThreshold}
+                          onChange={(e) => setSuccessThreshold(Number(e.target.value))}
+                          className="px-2 py-1 border rounded text-sm"
+                        >
+                          <option value={2}>2 correct swipes</option>
+                          <option value={3}>3 correct swipes</option>
+                          <option value={4}>4 correct swipes</option>
+                          <option value={5}>5 correct swipes</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Progress</h3>
+                      <div className="grid grid-cols-6 gap-1">
+                        {allLetters.map(letter => {
+                          const score = scores[letter] || 0;
+                          const isInCurrentSet = currentSet.includes(letter);
+                          return (
+                            <div
+                              key={letter}
+                              className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold ${
+                                score >= successThreshold
+                                  ? 'bg-green-500 text-white'
+                                  : isInCurrentSet
+                                  ? 'bg-blue-100 border-2 border-blue-500 text-blue-700'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                              title={`${letter}: ${score}/${successThreshold}`}
+                            >
+                              {letter}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              React.createElement('div', {
-                key: 'progress'
-              }, [
-                React.createElement('h3', {
-                  key: 'progress-title',
-                  className: "text-lg font-semibold mb-2"
-                }, "Progress"),
-                React.createElement('div', {
-                  key: 'progress-grid',
-                  className: "grid grid-cols-6 gap-1"
-                }, allLetters.map(letter => {
-                  const score = scores[letter] || 0;
-                  const isInCurrentSet = currentSet.includes(letter);
-                  return React.createElement('div', {
-                    key: letter,
-                    className: `w-8 h-8 rounded flex items-center justify-center text-xs font-bold ${
-                      score >= successThreshold
-                        ? 'bg-green-500 text-white'
-                        : isInCurrentSet
-                        ? 'bg-blue-100 border-2 border-blue-500 text-blue-700'
-                        : 'bg-gray-100 text-gray-600'
-                    }`,
-                    title: `${letter}: ${score}/${successThreshold}`
-                  }, letter);
-                }))
-              ])
-            ])),
+              {/* Progress for Current Set */}
+              <div className="w-full max-w-md mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-600">
+                    Current Set Progress
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {currentSet.filter(letter => (scores[letter] || 0) >= successThreshold).length} / {currentSet.length} mastered
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  {currentSet.map((letter, index) => {
+                    const score = scores[letter] || 0;
+                    const isCompleted = score >= successThreshold;
+                    return (
+                      <div key={letter} className="flex-1 text-center">
+                        <div
+                          className={`w-full h-2 rounded-full ${
+                            isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                          }`}
+                        >
+                          {!isCompleted && (
+                            <div
+                              className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                              style={{ width: `${(score / successThreshold) * 100}%` }}
+                            />
+                          )}
+                        </div>
+                        <span className={`text-xs font-medium mt-1 block ${
+                          index === currentCardIndex ? 'text-blue-600' : 'text-gray-500'
+                        }`}>
+                          {letter}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-            // Progress for Current Set
-            React.createElement('div', {
-              key: 'current-progress',
-              className: "w-full max-w-md mb-6"
-            }, [
-              React.createElement('div', {
-                key: 'progress-header',
-                className: "flex justify-between items-center mb-2"
-              }, [
-                React.createElement('span', {
-                  key: 'progress-label',
-                  className: "text-sm font-medium text-gray-600"
-                }, "Current Set Progress"),
-                React.createElement('span', {
-                  key: 'progress-count',
-                  className: "text-sm text-gray-500"
-                }, `${currentSet.filter(letter => (scores[letter] || 0) >= successThreshold).length} / ${currentSet.length} mastered`)
-              ]),
-              React.createElement('div', {
-                key: 'progress-bars',
-                className: "flex gap-2"
-              }, currentSet.map((letter, index) => {
-                const score = scores[letter] || 0;
-                const isCompleted = score >= successThreshold;
-                return React.createElement('div', {
-                  key: letter,
-                  className: "flex-1 text-center"
-                }, [
-                  React.createElement('div', {
-                    key: 'bar',
-                    className: `w-full h-2 rounded-full ${
-                      isCompleted ? 'bg-green-500' : 'bg-gray-200'
-                    }`
-                  }, !isCompleted && React.createElement('div', {
-                    className: "h-full bg-blue-500 rounded-full transition-all duration-300",
-                    style: { width: `${(score / successThreshold) * 100}%` }
-                  })),
-                  React.createElement('span', {
-                    key: 'letter',
-                    className: `text-xs font-medium mt-1 block ${
-                      index === currentCardIndex ? 'text-blue-600' : 'text-gray-500'
-                    }`
-                  }, letter)
-                ]);
-              }))
-            ]),
+              {/* Swipe Indicators */}
+              <div className="w-full max-w-md mb-4 flex justify-between px-8">
+                <div 
+                  className="flex items-center gap-2 text-red-500"
+                  style={getSwipeIndicatorStyle('left')}
+                >
+                  <XCircle size={32} />
+                  <span className="font-bold">Try Again</span>
+                </div>
+                <div 
+                  className="flex items-center gap-2 text-green-500"
+                  style={getSwipeIndicatorStyle('right')}
+                >
+                  <span className="font-bold">Good Job!</span>
+                  <CheckCircle size={32} />
+                </div>
+              </div>
 
-            // Swipe Indicators
-            React.createElement('div', {
-              key: 'indicators',
-              className: "w-full max-w-md mb-4 flex justify-between px-8"
-            }, [
-              React.createElement('div', {
-                key: 'left-indicator',
-                className: "flex items-center gap-2 text-red-500",
-                style: getSwipeIndicatorStyle('left')
-              }, [
-                React.createElement(XCircle, { key: 'left-icon', size: 32 }),
-                React.createElement('span', {
-                  key: 'left-text',
-                  className: "font-bold"
-                }, "Try Again")
-              ]),
-              React.createElement('div', {
-                key: 'right-indicator',
-                className: "flex items-center gap-2 text-green-500",
-                style: getSwipeIndicatorStyle('right')
-              }, [
-                React.createElement('span', {
-                  key: 'right-text',
-                  className: "font-bold"
-                }, "Good Job!"),
-                React.createElement(CheckCircle, { key: 'right-icon', size: 32 })
-              ])
-            ]),
+              {/* Flashcard */}
+              <div className="relative w-full max-w-md h-96 mb-8">
+                <div
+                  ref={cardRef}
+                  className="absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100 select-none"
+                  style={getCardStyle()}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  <div className="text-9xl font-bold text-gray-800 font-mono">
+                    {currentLetter}
+                  </div>
+                  
+                  {/* Drag indication */}
+                  {isDragging && (
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-gray-400 text-sm">
+                      Keep swiping...
+                    </div>
+                  )}
+                </div>
+              </div>
 
-            // Flashcard
-            React.createElement('div', {
-              key: 'card-container',
-              className: "relative w-full max-w-md h-96 mb-8"
-            }, React.createElement('div', {
-              ref: cardRef,
-              className: "absolute inset-0 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-gray-100 select-none",
-              style: getCardStyle(),
-              onMouseDown: handleMouseDown,
-              onMouseMove: handleMouseMove,
-              onMouseUp: handleMouseUp,
-              onMouseLeave: handleMouseUp,
-              onTouchStart: handleTouchStart,
-              onTouchMove: handleTouchMove,
-              onTouchEnd: handleTouchEnd
-            }, [
-              React.createElement('div', {
-                key: 'letter',
-                className: "text-9xl font-bold text-gray-800 font-mono"
-              }, currentLetter),
-              
-              isDragging && React.createElement('div', {
-                key: 'drag-hint',
-                className: "absolute bottom-4 left-1/2 transform -translate-x-1/2 text-gray-400 text-sm"
-              }, "Keep swiping...")
-            ])),
+              {/* Action Buttons */}
+              <div className="flex gap-4">
+                <button
+                  onClick={() => handleResponse(false)}
+                  className="px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors flex items-center gap-2"
+                >
+                  <XCircle size={20} />
+                  Try Again
+                </button>
+                <button
+                  onClick={() => handleResponse(true)}
+                  className="px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors flex items-center gap-2"
+                >
+                  <CheckCircle size={20} />
+                  Good Job!
+                </button>
+              </div>
 
-            // Action Buttons
-            React.createElement('div', {
-              key: 'buttons',
-              className: "flex gap-4"
-            }, [
-              React.createElement('button', {
-                key: 'fail-btn',
-                onClick: () => handleResponse(false),
-                className: "px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-colors flex items-center gap-2"
-              }, [
-                React.createElement(XCircle, { key: 'fail-icon', size: 20 }),
-                "Try Again"
-              ]),
-              React.createElement('button', {
-                key: 'success-btn',
-                onClick: () => handleResponse(true),
-                className: "px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors flex items-center gap-2"
-              }, [
-                React.createElement(CheckCircle, { key: 'success-icon', size: 20 }),
-                "Good Job!"
-              ])
-            ]),
-
-            // Instructions
-            React.createElement('div', {
-              key: 'instructions',
-              className: "mt-8 text-center text-gray-600 max-w-md"
-            }, React.createElement('p', {
-              className: "text-sm"
-            }, [
-              "Swipe right or tap \"Good Job!\" when you know the letter.",
-              React.createElement('br', { key: 'br' }),
-              "Swipe left or tap \"Try Again\" if you need more practice."
-            ]))
-          ]);
+              {/* Instructions */}
+              <div className="mt-8 text-center text-gray-600 max-w-md">
+                <p className="text-sm">
+                  Swipe right or tap "Good Job!" when you know the letter.
+                  <br />
+                  Swipe left or tap "Try Again" if you need more practice.
+                </p>
+              </div>
+            </div>
+          );
         };
 
-        ReactDOM.render(React.createElement(AlphabetFlashcards), document.getElementById('root'));
+        ReactDOM.render(<AlphabetFlashcards />, document.getElementById('root'));
     </script>
 </body>
 </html>
