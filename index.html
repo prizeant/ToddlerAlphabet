@@ -92,7 +92,8 @@
                   currentSet: parsed.currentSet || ['A', 'B', 'C', 'D', 'E'],
                   currentCardIndex: parsed.currentCardIndex || 0,
                   scores: parsed.scores || {},
-                  successThreshold: parsed.successThreshold || 3
+                  letterStats: parsed.letterStats || {}, // Track difficulty and review timing
+                  successThreshold: parsed.successThreshold || 5
                 };
               }
             } catch (error) {
@@ -102,7 +103,8 @@
               currentSet: ['A', 'B', 'C', 'D', 'E'],
               currentCardIndex: 0,
               scores: {},
-              successThreshold: 3
+              letterStats: {},
+              successThreshold: 5
             };
           };
 
@@ -110,6 +112,7 @@
           const [currentSet, setCurrentSet] = useState(savedData.currentSet);
           const [currentCardIndex, setCurrentCardIndex] = useState(savedData.currentCardIndex);
           const [scores, setScores] = useState(savedData.scores);
+          const [letterStats, setLetterStats] = useState(savedData.letterStats);
           const [isDragging, setIsDragging] = useState(false);
           const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
           const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -127,6 +130,7 @@
                 currentSet,
                 currentCardIndex,
                 scores,
+                letterStats,
                 successThreshold,
                 lastSaved: new Date().toISOString()
               };
@@ -139,9 +143,111 @@
           // Auto-save when important data changes
           useEffect(() => {
             saveData();
-          }, [currentSet, currentCardIndex, scores, successThreshold]);
+          }, [currentSet, currentCardIndex, scores, letterStats, successThreshold]);
 
-          const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+          // Spaced repetition helper functions
+          const getDifficultyLevel = (letter) => {
+            const stats = letterStats[letter];
+            if (!stats) return 'new';
+            
+            const errorRate = stats.errors / (stats.attempts || 1);
+            if (errorRate > 0.3) return 'hard';
+            if (errorRate > 0.1) return 'medium';
+            return 'easy';
+          };
+          
+          const getNextReviewTime = (letter, wasCorrect) => {
+            const now = Date.now();
+            const difficulty = getDifficultyLevel(letter);
+            const stats = letterStats[letter] || { interval: 1, easeFactor: 2.5 };
+            
+            let newInterval = stats.interval || 1;
+            let newEaseFactor = stats.easeFactor || 2.5;
+            
+            if (wasCorrect) {
+              // Increase interval based on difficulty
+              if (difficulty === 'easy') {
+                newInterval = Math.ceil(newInterval * 3); // Easy: 3 day multiplier
+                newEaseFactor = Math.min(3.0, newEaseFactor + 0.1);
+              } else if (difficulty === 'medium') {
+                newInterval = Math.ceil(newInterval * 2); // Medium: 2 day multiplier
+                newEaseFactor = Math.max(1.3, newEaseFactor);
+              } else {
+                newInterval = Math.ceil(newInterval * 1.5); // Hard: 1.5 day multiplier
+                newEaseFactor = Math.max(1.3, newEaseFactor - 0.1);
+              }
+            } else {
+              // Reset interval on wrong answer, but not to 1 if it was previously higher
+              newInterval = Math.max(1, Math.ceil(newInterval * 0.5));
+              newEaseFactor = Math.max(1.3, newEaseFactor - 0.2);
+            }
+            
+            // Convert days to minutes for testing (in real use, you'd keep as days)
+            const intervalMinutes = newInterval * 2; // 2 minutes per "day" for quick testing
+            
+            return {
+              nextReview: now + (intervalMinutes * 60 * 1000),
+              interval: newInterval,
+              easeFactor: newEaseFactor
+            };
+          };
+          
+          const updateLetterStats = (letter, wasCorrect) => {
+            const currentStats = letterStats[letter] || {
+              attempts: 0,
+              errors: 0,
+              firstSeen: Date.now(),
+              interval: 1,
+              easeFactor: 2.5,
+              nextReview: Date.now()
+            };
+            
+            const reviewData = getNextReviewTime(letter, wasCorrect);
+            
+            setLetterStats(prev => ({
+              ...prev,
+              [letter]: {
+                ...currentStats,
+                attempts: currentStats.attempts + 1,
+                errors: wasCorrect ? currentStats.errors : currentStats.errors + 1,
+                interval: reviewData.interval,
+                easeFactor: reviewData.easeFactor,
+                nextReview: reviewData.nextReview,
+                lastSeen: Date.now()
+              }
+            }));
+          };
+          
+          const getLettersForReview = () => {
+            const now = Date.now();
+            
+            // Get letters that need review (past their review time)
+            const dueForReview = allLetters.filter(letter => {
+              const stats = letterStats[letter];
+              if (!stats) return true; // New letters are always due
+              return now >= stats.nextReview;
+            });
+            
+            // Sort by priority: hardest letters first, then by how overdue they are
+            return dueForReview.sort((a, b) => {
+              const statsA = letterStats[a] || {};
+              const statsB = letterStats[b] || {};
+              
+              // Prioritize by difficulty (hard letters first)
+              const diffA = getDifficultyLevel(a);
+              const diffB = getDifficultyLevel(b);
+              const diffOrder = { 'hard': 0, 'medium': 1, 'easy': 2, 'new': 3 };
+              
+              if (diffOrder[diffA] !== diffOrder[diffB]) {
+                return diffOrder[diffA] - diffOrder[diffB];
+              }
+              
+              // Then by how overdue they are
+              const overdueA = now - (statsA.nextReview || 0);
+              const overdueB = now - (statsB.nextReview || 0);
+              return overdueB - overdueA;
+            });
+          };
           
           const currentLetter = currentSet[currentCardIndex];
 
@@ -285,45 +391,51 @@
           const clearAllData = () => {
             if (window.confirm('Are you sure you want to clear all progress? This cannot be undone.')) {
               setScores({});
+              setLetterStats({});
               setCurrentSet(['A', 'B', 'C', 'D', 'E']);
               setCurrentCardIndex(0);
-              setSuccessThreshold(3);
+              setSuccessThreshold(5);
               localStorage.removeItem('alphabet-flashcards-data');
             }
           };
 
-          const generateNewSet = () => {
-            // Get letters that need more practice (score < threshold)
-            const needsPractice = allLetters.filter(letter => 
-              (scores[letter] || 0) < successThreshold
-            );
+          const generateSpacedRepetitionSet = () => {
+            const lettersForReview = getLettersForReview();
             
-            if (needsPractice.length >= 5) {
-              // Take first 5 letters that need practice
-              setCurrentSet(needsPractice.slice(0, 5));
-            } else {
-              // Mix letters that need practice with new ones
-              const practiced = allLetters.filter(letter => 
-                (scores[letter] || 0) >= successThreshold
+            // Take up to 5 letters that are due for review
+            let newSet = lettersForReview.slice(0, 5);
+            
+            // If we don't have 5 letters due for review, fill with new letters
+            if (newSet.length < 5) {
+              const newLetters = allLetters.filter(letter => 
+                !letterStats[letter] && !newSet.includes(letter)
               );
-              const remaining = allLetters.filter(letter => 
-                !currentSet.includes(letter) && !practiced.includes(letter)
-              );
-              
-              const newSet = [
-                ...needsPractice,
-                ...remaining.slice(0, 5 - needsPractice.length)
-              ];
-              
-              if (newSet.length < 5) {
-                // Fill with any letters if we're running low
-                const filler = allLetters.filter(letter => !newSet.includes(letter));
-                newSet.push(...filler.slice(0, 5 - newSet.length));
-              }
-              
-              setCurrentSet(newSet.slice(0, 5));
+              newSet = [...newSet, ...newLetters.slice(0, 5 - newSet.length)];
             }
+            
+            // If still don't have 5, add some easier letters that aren't quite due yet
+            if (newSet.length < 5) {
+              const almostDueLetters = allLetters.filter(letter => {
+                const stats = letterStats[letter];
+                if (!stats || newSet.includes(letter)) return false;
+                const timeTillDue = stats.nextReview - Date.now();
+                return timeTillDue < (24 * 60 * 60 * 1000); // Due within a day
+              });
+              newSet = [...newSet, ...almostDueLetters.slice(0, 5 - newSet.length)];
+            }
+            
+            // Fallback: if still not enough, add any letters
+            if (newSet.length < 5) {
+              const remainingLetters = allLetters.filter(letter => !newSet.includes(letter));
+              newSet = [...newSet, ...remainingLetters.slice(0, 5 - newSet.length)];
+            }
+            
+            setCurrentSet(newSet.slice(0, 5));
             setCurrentCardIndex(0);
+          };
+
+          const generateNewSet = () => {
+            generateSpacedRepetitionSet();
           };
 
           const getCardStyle = () => {
@@ -406,36 +518,50 @@
                           onChange={(e) => setSuccessThreshold(Number(e.target.value))}
                           className="px-2 py-1 border rounded text-sm"
                         >
-                          <option value={2}>2 correct swipes</option>
                           <option value={3}>3 correct swipes</option>
                           <option value={4}>4 correct swipes</option>
                           <option value={5}>5 correct swipes</option>
+                          <option value={6}>6 correct swipes</option>
                         </select>
                       </div>
                     </div>
                     
                     <div>
-                      <h3 className="text-lg font-semibold mb-2">Progress</h3>
+                      <h3 className="text-lg font-semibold mb-2">Progress & Difficulty</h3>
                       <div className="grid grid-cols-6 gap-1">
                         {allLetters.map(letter => {
                           const score = scores[letter] || 0;
                           const isInCurrentSet = currentSet.includes(letter);
+                          const difficulty = getDifficultyLevel(letter);
+                          const stats = letterStats[letter];
+                          
+                          let bgClass = 'bg-gray-100 text-gray-600';
+                          if (score >= successThreshold) {
+                            bgClass = 'bg-green-500 text-white';
+                          } else if (isInCurrentSet) {
+                            bgClass = 'bg-blue-100 border-2 border-blue-500 text-blue-700';
+                          } else if (difficulty === 'hard') {
+                            bgClass = 'bg-red-100 text-red-700';
+                          } else if (difficulty === 'medium') {
+                            bgClass = 'bg-yellow-100 text-yellow-700';
+                          }
+                          
+                          const nextReview = stats?.nextReview;
+                          const isDue = nextReview && Date.now() >= nextReview;
+                          
                           return (
                             <div
                               key={letter}
-                              className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold ${
-                                score >= successThreshold
-                                  ? 'bg-green-500 text-white'
-                                  : isInCurrentSet
-                                  ? 'bg-blue-100 border-2 border-blue-500 text-blue-700'
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}
-                              title={`${letter}: ${score}/${successThreshold}`}
+                              className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold ${bgClass} ${isDue ? 'ring-2 ring-purple-400' : ''}`}
+                              title={`${letter}: ${score}/${successThreshold} | Difficulty: ${difficulty} | ${stats ? `Attempts: ${stats.attempts}, Errors: ${stats.errors}` : 'New'} ${isDue ? '| DUE NOW' : ''}`}
                             >
                               {letter}
                             </div>
                           );
                         })}
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        <div>🟢 Mastered  🔵 Current Set  🟡 Medium  🔴 Hard  ⭕ Due for Review</div>
                       </div>
                     </div>
                   </div>
