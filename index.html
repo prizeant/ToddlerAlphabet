@@ -145,6 +145,10 @@
             saveData();
           }, [currentSet, currentCardIndex, scores, letterStats, successThreshold]);
 
+          const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+          
+          const currentLetter = currentSet[currentCardIndex];
+
           // Spaced repetition helper functions
           const getDifficultyLevel = (letter) => {
             const stats = letterStats[letter];
