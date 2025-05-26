@@ -84,6 +84,99 @@
         const AlphabetFlashcards = () => {
           const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
           
+          // Audio context and oscillator for generating sounds
+          const audioContext = useRef(null);
+          const [audioEnabled, setAudioEnabled] = useState(true);
+          
+          // Initialize audio context
+          useEffect(() => {
+            audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
+            return () => {
+              if (audioContext.current) {
+                audioContext.current.close();
+              }
+            };
+          }, []);
+          
+          // Sound generation functions
+          const playSound = (frequency, duration, type = 'sine', volume = 0.3) => {
+            if (!audioEnabled || !audioContext.current) return;
+            
+            try {
+              const oscillator = audioContext.current.createOscillator();
+              const gainNode = audioContext.current.createGain();
+              
+              oscillator.connect(gainNode);
+              gainNode.connect(audioContext.current.destination);
+              
+              oscillator.type = type;
+              oscillator.frequency.value = frequency;
+              gainNode.gain.value = volume;
+              
+              oscillator.start();
+              gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.current.currentTime + duration);
+              oscillator.stop(audioContext.current.currentTime + duration);
+            } catch (error) {
+              console.log('Audio playback error:', error);
+            }
+          };
+          
+          const playCorrectSound = () => {
+            // Play a happy ascending tone
+            playSound(523.25, 0.1); // C5
+            setTimeout(() => playSound(659.25, 0.1), 100); // E5
+            setTimeout(() => playSound(783.99, 0.2), 200); // G5
+          };
+          
+          const playWrongSound = () => {
+            // Play a descending tone
+            playSound(311.13, 0.2, 'square', 0.2); // Eb4
+            setTimeout(() => playSound(261.63, 0.3, 'square', 0.2), 200); // C4
+          };
+          
+          const playVictorySound = () => {
+            // Play a triumphant fanfare
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            notes.forEach((freq, i) => {
+              setTimeout(() => playSound(freq, 0.3, 'sine', 0.4), i * 150);
+            });
+            // Add a final chord
+            setTimeout(() => {
+              playSound(523.25, 0.5, 'sine', 0.3); // C5
+              playSound(659.25, 0.5, 'sine', 0.3); // E5
+              playSound(783.99, 0.5, 'sine', 0.3); // G5
+            }, 600);
+          };
+          
+          const speakLetter = (letter) => {
+            if (!audioEnabled) return;
+            
+            // Use speech synthesis API
+            if ('speechSynthesis' in window) {
+              // Cancel any ongoing speech
+              window.speechSynthesis.cancel();
+              
+              const utterance = new SpeechSynthesisUtterance(letter);
+              utterance.rate = 0.8; // Slower for toddlers
+              utterance.pitch = 1.2; // Slightly higher pitch
+              utterance.volume = 0.8;
+              
+              // Try to use a child-friendly voice if available
+              const voices = window.speechSynthesis.getVoices();
+              const preferredVoice = voices.find(voice => 
+                voice.name.includes('Female') || 
+                voice.name.includes('Samantha') || 
+                voice.name.includes('Victoria')
+              );
+              
+              if (preferredVoice) {
+                utterance.voice = preferredVoice;
+              }
+              
+              window.speechSynthesis.speak(utterance);
+            }
+          };
+          
           // Load saved data from localStorage
           const loadSavedData = () => {
             try {
@@ -95,7 +188,8 @@
                   currentCardIndex: parsed.currentCardIndex || 0,
                   scores: parsed.scores || {},
                   letterStats: parsed.letterStats || {},
-                  successThreshold: parsed.successThreshold || 5
+                  successThreshold: parsed.successThreshold || 5,
+                  audioEnabled: parsed.audioEnabled !== undefined ? parsed.audioEnabled : true
                 };
               }
             } catch (error) {
@@ -106,7 +200,8 @@
               currentCardIndex: 0,
               scores: {},
               letterStats: {},
-              successThreshold: 5
+              successThreshold: 5,
+              audioEnabled: true
             };
           };
 
@@ -124,8 +219,24 @@
           const [showWrongFeedback, setShowWrongFeedback] = useState(false);
           const [showCelebration, setShowCelebration] = useState(false);
           const cardRef = useRef(null);
+          
+          // Initialize audio enabled state
+          useEffect(() => {
+            setAudioEnabled(savedData.audioEnabled);
+          }, []);
 
           const currentLetter = currentSet[currentCardIndex];
+          
+          // Speak letter when it changes
+          useEffect(() => {
+            if (currentLetter && !isDragging) {
+              // Small delay to let the card animation complete
+              const timer = setTimeout(() => {
+                speakLetter(currentLetter);
+              }, 200);
+              return () => clearTimeout(timer);
+            }
+          }, [currentLetter, currentCardIndex]);
 
           // Save data to localStorage whenever state changes
           const saveData = () => {
@@ -136,6 +247,7 @@
                 scores,
                 letterStats,
                 successThreshold,
+                audioEnabled,
                 lastSaved: new Date().toISOString()
               };
               localStorage.setItem('alphabet-flashcards-data', JSON.stringify(dataToSave));
@@ -147,7 +259,7 @@
           // Auto-save when important data changes
           useEffect(() => {
             saveData();
-          }, [currentSet, currentCardIndex, scores, letterStats, successThreshold]);
+          }, [currentSet, currentCardIndex, scores, letterStats, successThreshold, audioEnabled]);
 
           // Spaced repetition helper functions
           const getDifficultyLevel = (letter) => {
@@ -287,10 +399,12 @@
             if (isCorrect) {
               newScore = currentScore + 1;
               setShowCorrectFeedback(true);
+              playCorrectSound();
               setTimeout(() => setShowCorrectFeedback(false), 1000);
             } else {
               newScore = 0;
               setShowWrongFeedback(true);
+              playWrongSound();
               setTimeout(() => setShowWrongFeedback(false), 700);
             }
             
@@ -303,6 +417,7 @@
 
             if (newScore >= successThreshold) {
               setShowCelebration(true);
+              playVictorySound();
               setTimeout(() => setShowCelebration(false), 2000);
               
               setTimeout(() => {
@@ -412,18 +527,35 @@
           const CheckIcon = () => <span className="text-2xl">✓</span>;
           const XIcon = () => <span className="text-2xl">✗</span>;
           const SettingsIcon = () => <span className="text-xl">⚙</span>;
+          const SpeakerIcon = () => <span className="text-xl">🔊</span>;
+          const MuteIcon = () => <span className="text-xl">🔇</span>;
 
           return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center p-2 pt-8">
               {/* Header */}
               <div className="w-full max-w-md mb-4 flex justify-between items-center">
                 <h1 className="text-xl font-bold text-gray-800">Alphabet Practice</h1>
-                <button
-                  onClick={() => setShowSettings(!showSettings)}
-                  className="p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
-                >
-                  <SettingsIcon />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setAudioEnabled(!audioEnabled);
+                      if (!audioEnabled) {
+                        // Play a test sound when enabling
+                        playSound(523.25, 0.2);
+                      }
+                    }}
+                    className="p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
+                    title={audioEnabled ? "Mute sounds" : "Enable sounds"}
+                  >
+                    {audioEnabled ? <SpeakerIcon /> : <MuteIcon />}
+                  </button>
+                  <button
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
+                  >
+                    <SettingsIcon />
+                  </button>
+                </div>
               </div>
 
               {/* Settings Panel */}
@@ -436,11 +568,15 @@
                         {currentSet.map((letter, index) => (
                           <span
                             key={letter}
-                            className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center font-bold ${
+                            className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center font-bold cursor-pointer ${
                               index === currentCardIndex
                                 ? 'bg-blue-500 text-white border-blue-500'
                                 : 'bg-gray-100 border-gray-300'
                             }`}
+                            onClick={() => {
+                              setCurrentCardIndex(index);
+                              speakLetter(letter);
+                            }}
                           >
                             {letter}
                           </span>
@@ -470,18 +606,33 @@
                     
                     <div>
                       <h3 className="text-lg font-semibold mb-2">Settings</h3>
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm">Success threshold:</label>
-                        <select
-                          value={successThreshold}
-                          onChange={(e) => setSuccessThreshold(Number(e.target.value))}
-                          className="px-2 py-1 border rounded text-sm"
-                        >
-                          <option value={3}>3 correct swipes</option>
-                          <option value={4}>4 correct swipes</option>
-                          <option value={5}>5 correct swipes</option>
-                          <option value={6}>6 correct swipes</option>
-                        </select>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm">Success threshold:</label>
+                          <select
+                            value={successThreshold}
+                            onChange={(e) => setSuccessThreshold(Number(e.target.value))}
+                            className="px-2 py-1 border rounded text-sm"
+                          >
+                            <option value={3}>3 correct swipes</option>
+                            <option value={4}>4 correct swipes</option>
+                            <option value={5}>5 correct swipes</option>
+                            <option value={6}>6 correct swipes</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm">Audio:</label>
+                          <button
+                            onClick={() => setAudioEnabled(!audioEnabled)}
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                              audioEnabled 
+                                ? 'bg-green-500 text-white hover:bg-green-600' 
+                                : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                            }`}
+                          >
+                            {audioEnabled ? 'Enabled' : 'Disabled'}
+                          </button>
+                        </div>
                       </div>
                     </div>
                     
@@ -511,8 +662,9 @@
                           return (
                             <div
                               key={letter}
-                              className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold ${bgClass} ${isDue ? 'ring-2 ring-purple-400' : ''}`}
+                              className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold cursor-pointer ${bgClass} ${isDue ? 'ring-2 ring-purple-400' : ''}`}
                               title={`${letter}: ${score}/${successThreshold} | Difficulty: ${difficulty} | ${stats ? `Attempts: ${stats.attempts}, Errors: ${stats.errors}` : 'New'} ${isDue ? '| DUE NOW' : ''}`}
+                              onClick={() => speakLetter(letter)}
                             >
                               {letter}
                             </div>
@@ -521,6 +673,7 @@
                       </div>
                       <div className="mt-2 text-xs text-gray-500">
                         <div>🟢 Mastered  🔵 Current Set  🟡 Medium  🔴 Hard  ⭕ Due for Review</div>
+                        <div className="mt-1">Click any letter to hear it!</div>
                       </div>
                     </div>
                   </div>
@@ -581,7 +734,10 @@
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                   >
-                    <div className="text-8xl font-bold text-gray-800 font-mono">
+                    <div 
+                      className="text-8xl font-bold text-gray-800 font-mono cursor-pointer"
+                      onClick={() => !isDragging && speakLetter(currentLetter)}
+                    >
                       {currentLetter}
                     </div>
                     
